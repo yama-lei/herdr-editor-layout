@@ -33,7 +33,7 @@ export default class Titlebar {
         .bg(on ? t.accent : "#00000000").text_color(on ? t.solid_foreground ?? t.background : t.dim)
         .hover((s) => s.opacity(0.85)).tooltip(on ? `SSH: ${on} (open Remote Explorer)` : "Open a folder on a remote machine")
         .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
-        .on_click(() => showView("view-remote"))
+        .on_click(() => showView("view-herdr"))
         .child(icon("remote", 13))
         .when(Boolean(on), (el) => el.child(div().child(`SSH: ${on}`))))
       .child(div().flex_1())

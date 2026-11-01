@@ -1,5 +1,5 @@
 // Shared helpers for every view of the activity sidebar.
-import { div, svg } from "gpui-kit";
+import { div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
 import { spaces, panes, focused, run, shared, setShared, layout, theme } from "herdr";
 
@@ -21,11 +21,11 @@ export function find(node, id) {
 
 // The views of the sidebar stack, in bar order.
 export const VIEWS = [
-  { id: "view-herdr", icon: "layers", label: "Spaces & Agents" },
+  { id: "view-herdr", icon: "layers", label: "Spaces" },
+  { id: "view-agents", icon: "bot", label: "Agents" },
   { id: "view-files", icon: "files", label: "Explorer" },
   { id: "view-search", icon: "search", label: "Search" },
   { id: "view-git", icon: "git-branch", label: "Source Control" },
-  { id: "view-remote", icon: "server", label: "Remote Explorer" },
 ];
 
 export const activeView = () => find(layout(), STACK)?.active ?? VIEWS[0].id;
@@ -121,3 +121,17 @@ export function viewHeader(title, actions = []) {
 }
 
 export const statusColor = (s, t) => s === "A" || s === "?" ? t.ansi2 : s === "D" || s === "U" ? t.ansi1 : s === "R" ? t.ansi4 : t.blocked;
+
+// An agent status as Herdr's own lists draw it: a spinner while working, "!"
+// when it needs you, a dot when done, a ring when idle, nothing otherwise.
+export function statusMark(status, t) {
+  if (status === "working") return svg("mods/workspace-chrome/spinner.svg").size(12).mx(1).flex_none().text_color(t.working).spin(900);
+  if (status === "blocked") return div().size(14).flex_none().rounded(4).bg(t.blocked + "26").text_size(10.5).font_bold().text_color(t.blocked).flex().items_center().justify_center().child("!");
+  if (status === "done") return div().size(7).mx(3).flex_none().rounded(4).bg(t.done ?? t.ansi2);
+  if (status === "idle") return div().size(7).mx(3).flex_none().rounded(4).border(1.5).border_color(t.idle ?? t.dim);
+  return div().w(14).flex_none();
+}
+
+// A program's icon from Herdr's table: a tinted glyph or a full-color picture.
+export const programIcon = (p, size, color) => !p?.icon ? null
+  : p.tint ? svg(p.icon).size(size).flex_none().text_color(color) : image(p.icon).w(size).h(size).flex_none();

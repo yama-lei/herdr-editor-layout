@@ -58,31 +58,23 @@
           "children": [
             {
               "id": "view-herdr",
-              "type": "column",
-              "children": [
-                {
-                  "id": "spaces",
-                  "type": "block",
-                  "size": {
-                    "weight": 1
-                  },
-                  "min": 90,
-                  "content": {
-                    "mod": "spaces"
-                  }
-                },
-                {
-                  "id": "agents",
-                  "type": "block",
-                  "size": {
-                    "weight": 1
-                  },
-                  "min": 90,
-                  "content": {
-                    "mod": "agents"
-                  }
+              "type": "block",
+              "content": {
+                "mod": "activity",
+                "props": {
+                  "view": "spaces"
                 }
-              ]
+              }
+            },
+            {
+              "id": "view-agents",
+              "type": "block",
+              "content": {
+                "mod": "activity",
+                "props": {
+                  "view": "agents"
+                }
+              }
             },
             {
               "id": "view-files",
@@ -111,16 +103,6 @@
                 "mod": "activity",
                 "props": {
                   "view": "git"
-                }
-              }
-            },
-            {
-              "id": "view-remote",
-              "type": "block",
-              "content": {
-                "mod": "activity",
-                "props": {
-                  "view": "remote"
                 }
               }
             }

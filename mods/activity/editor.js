@@ -3,11 +3,16 @@
 // a file (editable, Ctrl+S saves, here or on an ssh machine), a viewer for
 // images / PDFs / media / binary files, or a git diff.
 import { div } from "gpui-kit";
-import { v_flex, h_flex, Editor, EditorState, Scrollbar, v_virtual_list, TextView } from "gpui-base";
+import { v_flex, h_flex, Editor, EditorState, Scrollbar, v_virtual_list, TextView, h_resizable, resizable_panel } from "gpui-base";
 import { exec, readTextFile, writeTextFile, watchFolder, theme, settings, shared, setShared, props, run, panes, nextCommand, home } from "herdr";
 import { iconButton, icon, READ, AREA, editorKey, setEditorSpec } from "./common.js";
 import { Viewer, viewerKind, human } from "./viewer.js";
 import { writeRemoteText, stat } from "./io.js";
+import { fileImage } from "./ficons/index.js";
+
+const MD = /\.(md|markdown|mdx)$/i;
+// Markdown files cycle edit → split (live preview on the right) → preview.
+const MD_MODES = { edit: ["split", "split", "Side-by-side preview"], split: ["preview", "eye", "Preview only"], preview: ["edit", "file-text", "Edit only"] };
 
 const LANG = { ts: "js", tsx: "js", mts: "js", cts: "js", jsx: "js", mjs: "js", cjs: "js", toml: "yaml", yml: "yaml", jsonc: "json", svelte: "html", vue: "html", htm: "html", md: "markdown", py: "python", rs: "rust", sh: "bash", zsh: "bash" };
 const MAX_EDIT = 400000;
@@ -32,12 +37,13 @@ export default class EditorPane {
     // In the workbench's editor area (props.slot) it follows the active space;
     // as a pane it belongs to its tab.
     this.slot = Boolean(p?.slot); this.tab = p?.tab;
-    this.rows = []; this.width = 0; this.pending = null;
+    this.rows = []; this.width = 0; this.pending = null; this.mdMode = "split";
     cx.spawn(async (cx) => {
       for (;;) {
         const c = await nextCommand();
         if (c === "save") this.save(cx);
         else if (c === "close") this.close();
+        else if (c === "preview") this.mdMode = MD_MODES[this.mdMode][0];
         cx.notify();
       }
     });
@@ -100,7 +106,14 @@ export default class EditorPane {
     this.code.on("change", (_e, cx) => {
       const dirty = this.code.value() !== this.original;
       if (dirty !== this.dirty) { this.dirty = dirty; if (!dirty && this.pending !== null) this.sync(cx); cx.notify(); }
+      else if (this.mdMode !== "edit" && MD.test(spec.path)) this.livePreview(cx);
     });
+  }
+
+  // Re-renders the Markdown preview while typing, at most every 150 ms.
+  livePreview(cx) {
+    if (this.previewTimer) return;
+    this.previewTimer = cx.timer.after(150, (cx) => { this.previewTimer = null; cx.notify(); });
   }
 
   async loadDiff(spec, seq) {
@@ -232,7 +245,7 @@ export default class EditorPane {
     const sub = !s ? "" : s.kind === "diff" ? (s.untracked ? "Untracked" : s.staged ? "Staged changes" : "Working tree changes")
       : `${s.on ? `${s.on}: ` : ""}${tilde(s.path)}${s.line ? ` · line ${s.line}` : ""}${this.readonly ? " · read-only" : ""}${this.viewer?.subtitle() ? ` · ${this.viewer.subtitle()}` : ""}`;
     const header = h_flex().h(34).flex_none().pl(12).pr(6).gap(8).items_center().border_b(1).border_color(t.border).bg(t.chrome)
-      .child(icon(s?.kind === "diff" ? "git-branch" : this.viewer?.kind === "image" ? "image" : "file-text", 14).text_color(t.muted))
+      .child(s?.kind === "file" ? fileImage(s.rel ?? s.path) : icon(s?.kind === "diff" ? "git-branch" : "file-text", 14).text_color(t.muted))
       .child(div().flex_none().max_w(320).truncate().font_semibold().child(title))
       .when(this.dirty, (el) => el.child(div().size(8).rounded_full().bg(t.foreground).tooltip("Unsaved changes")))
       .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.dim).child(sub))
@@ -240,8 +253,8 @@ export default class EditorPane {
       .when(Boolean(s) && s.kind === "diff", (el) => el.child(iconButton("ed-open", "file", "Open file", () => {
         setEditorSpec(this.slotKey(), { kind: "file", path: s.path, root: s.root, rel: s.rel, on: s.on });
       })))
-      .when(Boolean(s) && s.kind === "file" && /\.(md|markdown)$/i.test(s.path), (el) => el.child(iconButton("ed-preview", this.preview ? "file-text" : "eye",
-        this.preview ? "Edit Markdown" : "Preview Markdown", (_e, cx) => { this.preview = !this.preview; cx.notify(); }, { color: this.preview ? t.accent : undefined })))
+      .when(Boolean(s) && s.kind === "file" && MD.test(s.path) && Boolean(this.code), (el) => el.child(iconButton("ed-preview", MD_MODES[this.mdMode][1],
+        `${MD_MODES[this.mdMode][2]} (Ctrl+Shift+V)`, (_e, cx) => { this.mdMode = MD_MODES[this.mdMode][0]; cx.notify(); }, { color: this.mdMode !== "edit" ? t.accent : undefined })))
       .when(Boolean(this.viewer) && !this.error, (el) => el.children(this.viewer.tools(cx, t)))
       .when(this.viewer?.kind === "binary" && !this.error, (el) => el.child(iconButton("ed-astext", "file-text", "Open as text anyway", () => {
         setEditorSpec(this.slotKey(), { ...s, asText: true });
@@ -253,9 +266,14 @@ export default class EditorPane {
     else if (this.error) body = div().p(16).text_color(t.dim).child(this.error);
     else if (this.viewer) body = this.viewer.render(cx, t);
     else if (this.loading && !this.code && !this.rows.length) body = div().p(16).text_color(t.dim).child("Loading…");
-    else if (s.kind === "file" && this.code && this.preview && /\.(md|markdown)$/i.test(s.path))
-      body = div().id("ed-md").flex_1().min_h(0).overflow_y_scrollbar().px(24).py(16)
+    else if (s.kind === "file" && this.code && this.mdMode !== "edit" && MD.test(s.path)) {
+      const preview = div().id("ed-md").size_full().min_h(0).overflow_y_scrollbar().px(24).py(16).bg(t.background)
         .child(TextView.markdown("ed-md-text", this.code.value()).selectable());
+      body = this.mdMode === "preview" ? div().flex_1().min_h(0).child(preview)
+        : h_resizable("ed-md-split").flex_1().min_h(0)
+          .child(resizable_panel().size_range(160).child(Editor.new(this.code).size_full()))
+          .child(resizable_panel().size_range(160).child(div().size_full().border_l(1).border_color(t.border).child(preview)));
+    }
     else if (s.kind === "file" && this.code) body = Editor.new(this.code).flex_1().min_h(0);
     else body = div().flex_1().min_h(0).relative().font_family(settings().font_family ?? "JetBrains Mono").text_size(12)
       .child(div().id("ed-diff-x").size_full().overflow_x_scrollbar()

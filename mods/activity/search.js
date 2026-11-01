@@ -5,6 +5,7 @@ import { div } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { exec, theme, focused, shared } from "herdr";
 import { editorSpec, location, locationKey, openInEditor, iconButton, viewHeader, icon } from "./common.js";
+import { fileImage } from "./ficons/index.js";
 
 const MAX_LINES = 2000;
 
@@ -85,7 +86,7 @@ export default class Search {
       rows.push(h_flex().id(`sf-${f.rel}`).h(22).flex_none().pl(6).pr(10).gap(5).items_center().cursor_pointer().hover((s) => s.bg(t.hover))
         .on_click((_e, cx) => { this.fold[f.rel] = open; cx.notify(); })
         .child(icon(`chevron-${open ? "down" : "right"}`, 12).text_color(t.dim))
-        .child(icon("file", 13).text_color(t.dim))
+        .child(fileImage(f.rel, false, false, 14))
         .child(div().flex_none().max_w(160).truncate().child(name))
         .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.dim).child(parts.join("/")))
         .child(div().px(5).rounded_full().bg(t.raised).text_size(10).text_color(t.muted).child(String(f.hits.length))));

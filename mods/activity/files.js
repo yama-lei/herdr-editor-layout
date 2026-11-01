@@ -12,6 +12,7 @@ import { MOD, editorSpec, location, locationKey, basename, openInEditor, iconBut
 import { OP, CLIP, request, openDialog, menuHeight } from "./fileops.js";
 import { transfer, pasteImage, remove, rename, create, copyFilesToSystem, readSystemClipboard, sameMachine, sh, SEP } from "./io.js";
 import { openExternally } from "./viewer.js";
+import { fileImage } from "./ficons/index.js";
 
 const PER_FOLDER = 500, TOTAL = 5000;
 const STATUS = ["--no-optional-locks", "-c", "core.fsmonitor=false", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=normal"];
@@ -360,7 +361,7 @@ export default class Files {
         .on_mouse_down("right", (_e, cx) => { cx.stop_propagation(); this.openMenu(path, cx); })
         .on_drop((e, cx) => { cx.stop_propagation(); this.drop(e.paths, path, cx); })
         .child(entry.dir ? icon(`chevron-${open ? "down" : "right"}`, 12).text_color(t.dim) : div().w(12).flex_none())
-        .child(icon(entry.dir ? "folder" : "file", 14).text_color(entry.dir ? t.muted : t.dim))
+        .child(fileImage(path, entry.dir, open))
         .child(div().flex_1().min_w(0).truncate().when(Boolean(color), (el) => el.text_color(color)).child(entry.name))
         .when(Boolean(mark), (el) => el.child(div().text_size(10).text_color(color).child(mark))));
       if (entry.dir && open) this.rows(path, depth + 1, out, t, openPath);

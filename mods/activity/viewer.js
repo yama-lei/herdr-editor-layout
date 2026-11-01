@@ -179,6 +179,22 @@ export class Viewer {
     return out;
   }
 
+  // Ctrl + wheel zooms (wheel up: in), like a browser. A mouse notch is one
+  // step; trackpad pixels add up to one step per 60 px. Without Ctrl the event
+  // goes on and scrolls. On the content, so it runs before the scroll container.
+  wheelZoom(el) {
+    return el.on_scroll_wheel((e, cx) => {
+      if (!e.modifiers?.control) return;
+      cx.stop_propagation();
+      const dy = e.delta_lines ? Math.sign(e.delta_lines.y) * 60 : e.delta.y;
+      this.wheel = (this.wheel ?? 0) + dy;
+      if (Math.abs(this.wheel) < 60) return;
+      const d = Math.sign(this.wheel); this.wheel = 0;
+      const z = step(this.currentZoom(), d);
+      if (z !== this.zoom) { this.zoom = z; cx.notify(); }
+    });
+  }
+
   currentZoom() {
     if (this.zoom !== null) return this.zoom;
     if (this.kind === "image" && this.w) return this.fitScale();
@@ -218,7 +234,7 @@ export class Viewer {
     const s = this.currentZoom(), w = Math.max(1, Math.round(this.w * s)), h = Math.max(1, Math.round(this.h * s));
     return this.measured(div().id("v-image-box").flex_1().min_h(0).relative().bg(t.raised))
       .child(div().id("v-image-scroll").size_full().overflow_scroll()
-        .child(div().min_w_full().min_h_full().w(w + 32).h(h + 32).flex().items_center().justify_center()
+        .child(this.wheelZoom(div().id("v-image-content").min_w_full().min_h_full().w(w + 32).h(h + 32).flex().items_center().justify_center())
           .child(image(this.src).w(w).h(h).flex_none())));
   }
 
@@ -227,7 +243,7 @@ export class Viewer {
     const width = this.pageWidth(), height = Math.round(width * this.ph / this.pw), gap = 12;
     const page = (n) => {
       const d = this.drawn.get(n);
-      return div().w_full().h(height + gap).flex_none().flex().justify_center().pt(gap)
+      return this.wheelZoom(div().id(`v-page-${n}`).w_full().h(height + gap).flex_none().flex().justify_center().pt(gap))
         .child(div().w(width).h(height).flex_none().bg("#ffffff").shadow_sm().relative()
           .when(Boolean(d?.src), (el) => el.child(image(d.src).w(width).h(height)))
           .when(Boolean(d?.error), (el) => el.child(div().p(12).text_color("#b00020").text_size(12).child(d.error)))

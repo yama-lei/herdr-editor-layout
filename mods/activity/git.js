@@ -6,6 +6,7 @@ import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { exec, watchFolder, theme, focused, shared, setShared } from "herdr";
 import { sh, SEP } from "./io.js";
 import { location, locationKey, basename, openInEditor, iconButton, viewHeader, icon, statusColor, READ, editorSpec } from "./common.js";
+import { fileImage } from "./ficons/index.js";
 
 const LIMIT = 1000;
 // Every read of a refresh as one script (one round trip on a remote machine):
@@ -164,7 +165,7 @@ export default class Git {
     return h_flex().id(`git-${id}`).on_hover((h, cx) => this.hover(id, h, cx)).h(24).flex_none().pl(20).pr(8).gap(6).items_center().cursor_pointer()
       .when(selected, (el) => el.bg(t.selected)).hover((s) => s.bg(t.hover))
       .on_click(() => this.openDiff(f, staged))
-      .child(icon("file", 13).text_color(t.dim))
+      .child(fileImage(f.path, false, false, 14))
       .child(h_flex().flex_1().min_w(0).gap(6).items_baseline()
         .child(div().flex_none().max_w(180).truncate().text_color(f.status === "D" ? t.dim : color).when(f.status === "D", (el) => el.line_through()).child(name))
         .child(div().flex_1().min_w(0).truncate().text_size(11).text_color(t.dim).child(parts.join("/"))))
