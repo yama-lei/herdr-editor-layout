@@ -1,5 +1,6 @@
 # herdr-mods
-
+![overview1](image.png)
+![overview2](image-1.png)
 Herdr mods and a layout of my own.
 
 | Folder | What it is |
@@ -68,3 +69,4 @@ Merge `keys.json` into `~/.config/herdr-app/keys.json` once:
 - No drag-and-drop inside the tree (moving): use Cut / Paste. Video doesn't play inside Herdr; "Open with System App" plays it.
 - Agents' history needs python3 on the machine. Other agents' sessions (Gemini CLI, Amp, …) aren't read. omp and opencode can't fork from the list (Shift+click resumes). opencode sessions show no model or prompt, only their title.
 - Needs locally: poppler-utils (PDF), ffmpeg (other images, media), wl-clipboard or xclip (file clipboard), gio (Trash).
+
