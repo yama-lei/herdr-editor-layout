@@ -1,4 +1,4 @@
-# herdr-mods
+# herdr-editor-view
 ![overview1](image.png)
 ![overview2](image-1.png)
 Herdr mods and a layout of my own.
